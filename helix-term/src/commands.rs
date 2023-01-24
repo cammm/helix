@@ -298,6 +298,7 @@ impl MappableCommand {
         goto_window_top, "Goto window top",
         goto_window_center, "Goto window center",
         goto_window_bottom, "Goto window bottom",
+        goto_alternate_file, "Goto alternate file",
         goto_last_accessed_file, "Goto last accessed file",
         goto_last_modified_file, "Goto last modified file",
         goto_last_modification, "Goto last modification",
@@ -2745,6 +2746,15 @@ fn goto_last_line(cx: &mut Context) {
 
     push_jump(view, doc);
     doc.set_selection(view.id, selection);
+}
+
+fn goto_alternate_file(cx: &mut Context) {
+    let doc = doc!(cx.editor);
+    if let Some(path) = doc.get_alternate_file() {
+        if let Err(e) = cx.editor.open(path.as_path(), Action::Replace) {
+            cx.editor.set_error(format!("Open file failed: {:?}", e));
+        }
+    }
 }
 
 fn goto_last_accessed_file(cx: &mut Context) {

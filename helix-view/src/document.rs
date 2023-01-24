@@ -1017,6 +1017,20 @@ impl Document {
         current_revision
     }
 
+    /// Returns an alternate file with the same stem as the current path
+    pub fn get_alternate_file(&self) -> Option<PathBuf> {
+        let path = self.path.as_ref().unwrap(); 
+        let dir = path.parent().unwrap();
+        let stem = path.file_stem().unwrap();
+        for file in std::fs::read_dir(dir).unwrap() {
+            let candidate = file.unwrap().path();
+            if candidate.file_stem().unwrap().eq(stem) && candidate.ne(path) {
+                return Some(candidate);
+            }
+        }
+        return None;
+    }
+    
     /// Corresponding language scope name. Usually `source.<lang>`.
     pub fn language_scope(&self) -> Option<&str> {
         self.language
