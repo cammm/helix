@@ -4822,7 +4822,7 @@ fn shell_keep_pipe(cx: &mut Context) {
 
             for (i, range) in selection.ranges().iter().enumerate() {
                 let fragment = range.slice(text);
-                let (_output, success) = match shell_impl(shell, input, Some(fragment.into())) {
+                let (_output, success) = match shell_impl(doc, shell, input, Some(fragment.into())) {
                     Ok(result) => result,
                     Err(err) => {
                         cx.editor.set_error(err.to_string());
@@ -4850,8 +4850,9 @@ fn shell_keep_pipe(cx: &mut Context) {
     );
 }
 
-fn shell_impl(shell: &[String], cmd: &str, input: Option<Rope>) -> anyhow::Result<(Tendril, bool)> {
-    tokio::task::block_in_place(|| helix_lsp::block_on(shell_impl_async(shell, cmd, input)))
+fn shell_impl(doc: &Document, shell: &[String], cmd: &str, input: Option<Rope>) -> anyhow::Result<(Tendril, bool)> {
+    let replaced = replace_filepath(doc, cmd);
+    tokio::task::block_in_place(|| helix_lsp::block_on(shell_impl_async(shell, replaced.as_str(), input)))
 }
 
 async fn shell_impl_async(
@@ -4942,7 +4943,7 @@ fn shell(cx: &mut compositor::Context, cmd: &str, behavior: &ShellBehavior) {
             (output.clone(), true)
         } else {
             let fragment = range.slice(text);
-            match shell_impl(shell, cmd, pipe.then(|| fragment.into())) {
+            match shell_impl(doc, shell, cmd, pipe.then(|| fragment.into())) {
                 Ok(result) => {
                     if !pipe {
                         shell_output = Some(result.0.clone());
@@ -4991,6 +4992,10 @@ fn shell(cx: &mut compositor::Context, cmd: &str, behavior: &ShellBehavior) {
     // after replace cursor may be out of bounds, do this to
     // make sure cursor is in view and update scroll as well
     view.ensure_cursor_in_view(doc, config.scrolloff);
+}
+
+fn replace_filepath(doc: &Document, cmd: &str) -> String {
+    return cmd.replace("$file", doc.path().and_then(|p| p.to_str()).unwrap_or(""));
 }
 
 fn shell_prompt(cx: &mut Context, prompt: Cow<'static, str>, behavior: ShellBehavior) {
